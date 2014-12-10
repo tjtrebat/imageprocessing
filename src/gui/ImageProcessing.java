@@ -1,6 +1,5 @@
 package gui;
 
-import java.awt.Color;
 import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -28,6 +27,9 @@ import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.border.TitledBorder;
 
+import wavelet.CDF97;
+import wavelet.HaarWavelet;
+import wavelet.LeGall53;
 import codec.ImageDecoder;
 import codec.ImageEncoder;
 
@@ -210,74 +212,9 @@ public class ImageProcessing extends JFrame implements ActionListener {
 			this.getImageDst().setIcon(new ImageIcon(this.jpegCodify(image)));
 		} else if (opName.equals("Haar Wavelet")) {
 			this.setBorderTitle(this.getPanelDst(), "Operation - Haar Wavelet");
-			double[] h = { Math.sqrt(2) / 2, Math.sqrt(2) / 2 };
-			double[] g = { -Math.sqrt(2) / 2, Math.sqrt(2) / 2 };
 			for (int n = 0; n < 3; n++) {
-				double[][] wavelet = new double[height][height];
-				int offset = 0;
-				for (int i = 0; i < wavelet.length / 2; i++) {
-					int k = offset;
-					for (int j = 0; j < h.length; j++) {
-						wavelet[i][k] = h[j];
-						k = (k + 1) % wavelet[i].length;
-					}
-					offset = (offset + 2) % wavelet[i].length;
-				}
-				offset = 0;
-				for (int i = wavelet.length / 2; i < wavelet.length; i++) {
-					int k = offset;
-					for (int j = 0; j < g.length; j++) {
-						wavelet[i][k] = g[j];
-						k = (k + 1) % wavelet[i].length;
-					}
-					offset = (offset + 2) % wavelet[i].length;
-				}
-				// apply the wavelet transformation to columns
-				for (int x = 0; x < width; x++) {
-					int[] col = new int[height];
-					for (int y = 0; y < height; y++) {
-						int[] rgb = new int[3];
-						for (int i = 0; i < height; i++) {
-							Color color = new Color(rgbArray[x + i
-									* image.getWidth()]);
-							rgb[0] += (int) (wavelet[y][i] * color.getRed());
-							rgb[1] += (int) (wavelet[y][i] * color.getGreen());
-							rgb[2] += (int) (wavelet[y][i] * color.getBlue());
-						}
-						for (int i = 0; i < rgb.length; i++)
-							if (rgb[i] < 0)
-								rgb[i] = 0;
-							else if (rgb[i] > 255)
-								rgb[i] = 255;
-						col[y] = new Color(rgb[0], rgb[1], rgb[2]).getRGB();
-					}
-					// replace col in rgbArray
-					for (int y = 0; y < height; y++)
-						rgbArray[x + y * image.getWidth()] = col[y];
-				}
-				// apply wavelet transform to rows
-				for (int y = 0; y < height; y++) {
-					int[] row = new int[width];
-					for (int x = 0; x < width; x++) {
-						int[] rgb = new int[3];
-						for (int i = 0; i < width; i++) {
-							Color color = new Color(rgbArray[i + y
-									* image.getWidth()]);
-							rgb[0] += (int) (wavelet[x][i] * color.getRed());
-							rgb[1] += (int) (wavelet[x][i] * color.getGreen());
-							rgb[2] += (int) (wavelet[x][i] * color.getBlue());
-						}
-						for (int i = 0; i < rgb.length; i++)
-							if (rgb[i] < 0)
-								rgb[i] = 0;
-							else if (rgb[i] > 255)
-								rgb[i] = 255;
-						row[x] = new Color(rgb[0], rgb[1], rgb[2]).getRGB();
-					}
-					// replace row in rgbArray
-					for (int x = 0; x < width; x++)
-						rgbArray[x + y * image.getWidth()] = row[x];
-				}
+				new HaarWavelet(width, height).forward(rgbArray,
+						image.getWidth());
 				width /= 2;
 				height /= 2;
 			}
@@ -289,80 +226,8 @@ public class ImageProcessing extends JFrame implements ActionListener {
 		} else if (opName.equals("CDF 9/7 Wavelet")) {
 			this.setBorderTitle(this.getPanelDst(),
 					"Operation - CDF 9/7 Wavelet");
-			// lowpass filter
-			float[] h = { 0.026748757411f, -0.016864118443f, -0.078223266529f,
-					0.266864118443f, 0.602949018236f, 0.266864118443f,
-					-0.078223266529f, -0.016864118443f, 0.026748757411f };
-			// highpass filter
-			float[] g = { 0.091271763114f, -0.057543526229f, -0.591271763114f,
-					1.11508705f, -0.591271763114f, -0.057543526229f,
-					0.091271763114f };
 			for (int n = 0; n < 3; n++) {
-				float[][] wavelet = new float[height][height];
-				int offset = height - h.length / 2;
-				for (int i = 0; i < wavelet.length / 2; i++) {
-					int k = offset;
-					for (int j = 0; j < h.length; j++) {
-						wavelet[i][k] = h[j];
-						k = (k + 1) % wavelet[i].length;
-					}
-					offset = (offset + 2) % wavelet[i].length;
-				}
-				offset = height - g.length / 2;
-				for (int i = wavelet.length / 2; i < wavelet.length; i++) {
-					int k = offset;
-					for (int j = 0; j < g.length; j++) {
-						wavelet[i][k] = g[j];
-						k = (k + 1) % wavelet[i].length;
-					}
-					offset = (offset + 2) % wavelet[i].length;
-				}
-				// apply the wavelet transformation to columns
-				for (int x = 0; x < width; x++) {
-					int[] col = new int[height];
-					for (int y = 0; y < height; y++) {
-						int[] rgb = new int[3];
-						for (int i = 0; i < height; i++) {
-							Color color = new Color(rgbArray[x + i
-									* image.getWidth()]);
-							rgb[0] += (int) (wavelet[y][i] * color.getRed());
-							rgb[1] += (int) (wavelet[y][i] * color.getGreen());
-							rgb[2] += (int) (wavelet[y][i] * color.getBlue());
-						}
-						for (int i = 0; i < rgb.length; i++)
-							if (rgb[i] < 0)
-								rgb[i] = 0;
-							else if (rgb[i] > 255)
-								rgb[i] = 255;
-						col[y] = new Color(rgb[0], rgb[1], rgb[2]).getRGB();
-					}
-					// replace col in rgbArray
-					for (int y = 0; y < height; y++)
-						rgbArray[x + y * image.getWidth()] = col[y];
-				}
-				// apply wavelet transform to rows
-				for (int y = 0; y < height; y++) {
-					int[] row = new int[width];
-					for (int x = 0; x < width; x++) {
-						int[] rgb = new int[3];
-						for (int i = 0; i < width; i++) {
-							Color color = new Color(rgbArray[i + y
-									* image.getWidth()]);
-							rgb[0] += (int) (wavelet[x][i] * color.getRed());
-							rgb[1] += (int) (wavelet[x][i] * color.getGreen());
-							rgb[2] += (int) (wavelet[x][i] * color.getBlue());
-						}
-						for (int i = 0; i < rgb.length; i++)
-							if (rgb[i] < 0)
-								rgb[i] = 0;
-							else if (rgb[i] > 255)
-								rgb[i] = 255;
-						row[x] = new Color(rgb[0], rgb[1], rgb[2]).getRGB();
-					}
-					// replace row in rgbArray
-					for (int x = 0; x < width; x++)
-						rgbArray[x + y * image.getWidth()] = row[x];
-				}
+				new CDF97(width, height).forward(rgbArray, image.getWidth());
 				width /= 2;
 				height /= 2;
 			}
@@ -374,82 +239,8 @@ public class ImageProcessing extends JFrame implements ActionListener {
 		} else if (opName.equals("LeGall 5/3 Wavelet")) {
 			this.setBorderTitle(this.getPanelDst(),
 					"Operation - LeGall 5/3 Wavelet");
-			// lowpass filter
-			float[] h = { -1f / 8, 1f / 4, 3f / 4, 1f / 4, -1f / 8 };
-			// highpass filter
-			float[] g = { -1f / 2, 1, -1f / 2 };
 			for (int n = 0; n < 3; n++) {
-				float[][] wavelet = new float[height][height];
-				// fill row 1 values
-				wavelet[0][0] = h[2];
-				for (int j = 1; j < 3; j++)
-					wavelet[0][j] = 2 * h[2 + j];
-				// fill the remaining rows
-				int offset = 0;
-				for (int i = 1; i < height / 2; i++) {
-					for (int j = offset; j < offset + h.length; j++)
-						if (j < wavelet[i].length)
-							wavelet[i][j] = h[j - offset];
-					offset += 2;
-				}
-				// add h[0] to h[2] in the last row
-				wavelet[height / 2 - 1][height - 2] += h[0];
-				// set g in wavelet
-				offset = 0;
-				for (int i = height / 2; i < height; i++) {
-					for (int j = offset; j < offset + g.length; j++)
-						if (j < wavelet[i].length)
-							wavelet[i][j] = g[j - offset];
-					offset += 2;
-				}
-				// add g[1] to g[1] in the last row
-				wavelet[height - 1][height - 2] += g[0];
-				// apply the wavelet transformation to columns
-				for (int x = 0; x < width; x++) {
-					int[] col = new int[height];
-					for (int y = 0; y < height; y++) {
-						int[] rgb = new int[3];
-						for (int i = 0; i < height; i++) {
-							Color color = new Color(rgbArray[x + i
-									* image.getWidth()]);
-							rgb[0] += (int) (wavelet[y][i] * color.getRed());
-							rgb[1] += (int) (wavelet[y][i] * color.getGreen());
-							rgb[2] += (int) (wavelet[y][i] * color.getBlue());
-						}
-						for (int i = 0; i < rgb.length; i++)
-							if (rgb[i] < 0)
-								rgb[i] = 0;
-							else if (rgb[i] > 255)
-								rgb[i] = 255;
-						col[y] = new Color(rgb[0], rgb[1], rgb[2]).getRGB();
-					}
-					// replace col in rgbArray
-					for (int y = 0; y < height; y++)
-						rgbArray[x + y * image.getWidth()] = col[y];
-				}
-				// apply wavelet transform to rows
-				for (int y = 0; y < height; y++) {
-					int[] row = new int[width];
-					for (int x = 0; x < width; x++) {
-						int[] rgb = new int[3];
-						for (int i = 0; i < width; i++) {
-							Color color = new Color(rgbArray[i + y
-									* image.getWidth()]);
-							rgb[0] += (int) (wavelet[x][i] * color.getRed());
-							rgb[1] += (int) (wavelet[x][i] * color.getGreen());
-							rgb[2] += (int) (wavelet[x][i] * color.getBlue());
-						}
-						for (int i = 0; i < rgb.length; i++)
-							if (rgb[i] < 0)
-								rgb[i] = 0;
-							else if (rgb[i] > 255)
-								rgb[i] = 255;
-						row[x] = new Color(rgb[0], rgb[1], rgb[2]).getRGB();
-					}
-					// replace row in rgbArray
-					for (int x = 0; x < width; x++)
-						rgbArray[x + y * image.getWidth()] = row[x];
-				}
+				new LeGall53(width, height).forward(rgbArray, image.getWidth());
 				width /= 2;
 				height /= 2;
 			}
