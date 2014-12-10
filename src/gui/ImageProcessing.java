@@ -1,5 +1,6 @@
 package gui;
 
+import java.awt.Color;
 import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -10,8 +11,6 @@ import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.awt.image.BufferedImageOp;
 import java.awt.image.ColorConvertOp;
-import java.awt.image.ConvolveOp;
-import java.awt.image.Kernel;
 import java.awt.image.RenderedImage;
 import java.io.File;
 import java.io.IOException;
@@ -39,7 +38,8 @@ public class ImageProcessing extends JFrame implements ActionListener {
 	private Container cp;
 	private JMenu mTransform;
 	private JMenuItem miOpen, miSave, miExit;
-	private JMenuItem miCopy, miJpegCodify, miHaar, miCDF97, miGrayscale;
+	private JMenuItem miCopy, miJpegCodify, miHaar, miCDF97, miLeGall,
+			miGrayscale;
 	private JPanel panelSrc, panelDst;
 	private JLabel imageSrc, imageDst;
 	private JLabel imageSrcLbl, imageDstLbl;
@@ -57,6 +57,7 @@ public class ImageProcessing extends JFrame implements ActionListener {
 		this.miJpegCodify = new JMenuItem("JPEG Codify");
 		this.miHaar = new JMenuItem("Haar Wavelet");
 		this.miCDF97 = new JMenuItem("CDF 9/7 Wavelet");
+		this.miLeGall = new JMenuItem("LeGall 5/3 Wavelet");
 		this.miGrayscale = new JMenuItem("Gray scale");
 		// ImagePanels
 		this.panelSrc = new JPanel();
@@ -99,6 +100,7 @@ public class ImageProcessing extends JFrame implements ActionListener {
 		menu.add(this.getmTransform());
 		this.getmTransform().add(this.getMiHaar());
 		this.getmTransform().add(this.getMiCDF97());
+		this.getmTransform().add(this.getMiLeGall());
 		menu.add(this.getMiGrayscale());
 		mb.add(menu); // add menu to mb
 		setJMenuBar(mb);
@@ -120,6 +122,7 @@ public class ImageProcessing extends JFrame implements ActionListener {
 		this.getMiJpegCodify().setEnabled(false);
 		this.getMiHaar().addActionListener(this);
 		this.getMiCDF97().addActionListener(this);
+		this.getMiLeGall().addActionListener(this);
 		this.getmTransform().setEnabled(false);
 		this.getMiGrayscale().addActionListener(this);
 		this.getMiGrayscale().setEnabled(false);
@@ -198,91 +201,263 @@ public class ImageProcessing extends JFrame implements ActionListener {
 
 	public void process(String opName) {
 		BufferedImageOp op = null;
-		BufferedImage src = (BufferedImage) this.getImage(this.getImageDst());
-		int width = src.getWidth();
-		int height = src.getHeight();
+		BufferedImage image = (BufferedImage) this.getImage(this.getImageDst());
+		int width = image.getWidth();
+		int height = image.getHeight();
+		int[] rgbArray = image.getRGB(0, 0, width, height, null, 0, width);
 		if (opName.equals("JPEG Codify")) {
 			this.setBorderTitle(this.getPanelDst(), "Operation - JPEG Codify");
-			this.getImageDst().setIcon(new ImageIcon(this.jpegCodify(src)));
+			this.getImageDst().setIcon(new ImageIcon(this.jpegCodify(image)));
 		} else if (opName.equals("Haar Wavelet")) {
 			this.setBorderTitle(this.getPanelDst(), "Operation - Haar Wavelet");
-			BufferedImage dest = new BufferedImage(width, height,
-					BufferedImage.TYPE_INT_RGB);
-			for (int i = 0; i < 3; i++) {
-				// upper left-hand block
-				float[] data = { 0f, 0f, 0f, 0f, .50f, .50f, 0f, .50f, .50f };
-				Kernel ker = new Kernel(3, 3, data);
-				op = new ConvolveOp(ker, ConvolveOp.EDGE_NO_OP, null);
-				BufferedImage bi = op.filter(src, null);
-				for (int x = 0; x < width / 2; x++)
-					for (int y = 0; y < height / 2; y++)
-						dest.setRGB(x, y, bi.getRGB(2 * x, 2 * y));
-				// upper right-hand block
-				data = new float[] { 0f, 0f, 0f, 0f, -.50f, .50f, 0f, -.50f,
-						.50f };
-				ker = new Kernel(3, 3, data);
-				op = new ConvolveOp(ker, ConvolveOp.EDGE_NO_OP, null);
-				bi = op.filter(src, null);
-				for (int x = 0; x < width / 2; x++)
-					for (int y = 0; y < height / 2; y++)
-						dest.setRGB(x + width / 2, y, bi.getRGB(2 * x, 2 * y));
-				// lower left-hand block
-				data = new float[] { 0f, 0f, 0f, 0f, -.50f, -.50f, 0f, .50f,
-						.50f };
-				ker = new Kernel(3, 3, data);
-				op = new ConvolveOp(ker, ConvolveOp.EDGE_NO_OP, null);
-				bi = op.filter(src, null);
-				for (int x = 0; x < width / 2; x++)
-					for (int y = 0; y < height / 2; y++)
-						dest.setRGB(x, y + height / 2, bi.getRGB(2 * x, 2 * y));
-				// lower right-hand block
-				data = new float[] { 0f, 0f, 0f, 0f, -.50f, .50f, 0f, .50f,
-						-.50f };
-				ker = new Kernel(3, 3, data);
-				op = new ConvolveOp(ker, ConvolveOp.EDGE_NO_OP, null);
-				bi = op.filter(src, null);
-				for (int x = 0; x < width / 2; x++)
-					for (int y = 0; y < height / 2; y++)
-						dest.setRGB(x + width / 2, y + height / 2,
-								bi.getRGB(2 * x, 2 * y));
+			double[] h = { Math.sqrt(2) / 2, Math.sqrt(2) / 2 };
+			double[] g = { -Math.sqrt(2) / 2, Math.sqrt(2) / 2 };
+			for (int n = 0; n < 3; n++) {
+				double[][] wavelet = new double[height][height];
+				int offset = 0;
+				for (int i = 0; i < wavelet.length / 2; i++) {
+					int k = offset;
+					for (int j = 0; j < h.length; j++) {
+						wavelet[i][k] = h[j];
+						k = (k + 1) % wavelet[i].length;
+					}
+					offset = (offset + 2) % wavelet[i].length;
+				}
+				offset = 0;
+				for (int i = wavelet.length / 2; i < wavelet.length; i++) {
+					int k = offset;
+					for (int j = 0; j < g.length; j++) {
+						wavelet[i][k] = g[j];
+						k = (k + 1) % wavelet[i].length;
+					}
+					offset = (offset + 2) % wavelet[i].length;
+				}
+				// apply the wavelet transformation to columns
+				for (int x = 0; x < width; x++) {
+					int[] col = new int[height];
+					for (int y = 0; y < height; y++) {
+						int[] rgb = new int[3];
+						for (int i = 0; i < height; i++) {
+							Color color = new Color(rgbArray[x + i
+									* image.getWidth()]);
+							rgb[0] += (int) (wavelet[y][i] * color.getRed());
+							rgb[1] += (int) (wavelet[y][i] * color.getGreen());
+							rgb[2] += (int) (wavelet[y][i] * color.getBlue());
+						}
+						for (int i = 0; i < rgb.length; i++)
+							if (rgb[i] < 0)
+								rgb[i] = 0;
+							else if (rgb[i] > 255)
+								rgb[i] = 255;
+						col[y] = new Color(rgb[0], rgb[1], rgb[2]).getRGB();
+					}
+					// replace col in rgbArray
+					for (int y = 0; y < height; y++)
+						rgbArray[x + y * image.getWidth()] = col[y];
+				}
+				// apply wavelet transform to rows
+				for (int y = 0; y < height; y++) {
+					int[] row = new int[width];
+					for (int x = 0; x < width; x++) {
+						int[] rgb = new int[3];
+						for (int i = 0; i < width; i++) {
+							Color color = new Color(rgbArray[i + y
+									* image.getWidth()]);
+							rgb[0] += (int) (wavelet[x][i] * color.getRed());
+							rgb[1] += (int) (wavelet[x][i] * color.getGreen());
+							rgb[2] += (int) (wavelet[x][i] * color.getBlue());
+						}
+						for (int i = 0; i < rgb.length; i++)
+							if (rgb[i] < 0)
+								rgb[i] = 0;
+							else if (rgb[i] > 255)
+								rgb[i] = 255;
+						row[x] = new Color(rgb[0], rgb[1], rgb[2]).getRGB();
+					}
+					// replace row in rgbArray
+					for (int x = 0; x < width; x++)
+						rgbArray[x + y * image.getWidth()] = row[x];
+				}
 				width /= 2;
 				height /= 2;
-				src = dest.getSubimage(0, 0, width, height);
 			}
-			this.getImageDst().setIcon(new ImageIcon(dest));
+			BufferedImage bi = new BufferedImage(image.getWidth(),
+					image.getHeight(), BufferedImage.TYPE_INT_RGB);
+			bi.setRGB(0, 0, bi.getWidth(), bi.getHeight(), rgbArray, 0,
+					bi.getWidth());
+			this.getImageDst().setIcon(new ImageIcon(bi));
 		} else if (opName.equals("CDF 9/7 Wavelet")) {
-			this.setBorderTitle(this.getPanelDst(), "CDF 9/7 Wavelet");
-			BufferedImage dest = new BufferedImage(width, height,
-					BufferedImage.TYPE_INT_RGB);
-			// upper left-hand block
-			float[] data = { 0.0378285f, -0.0238495f, -0.110624f, 0.377403f,
-					0.852699f, 0.377403f, -0.110624f, -0.0238495f, 0.0378285f };
-			Kernel ker = new Kernel(1, 9, data);
-			op = new ConvolveOp(ker, ConvolveOp.EDGE_NO_OP, null);
-			BufferedImage bi = op.filter(src, null);
-			for (int x = 0; x < width; x++)
-				for (int y = 0; y < height / 2; y++)
-					dest.setRGB(x, y, bi.getRGB(x, 2 * y));
-			ker = new Kernel(9, 1, data);
-			op = new ConvolveOp(ker, ConvolveOp.EDGE_NO_OP, null);
-			bi = op.filter(bi, null);
-			for (int x = 0; x < width / 2; x++)
-				for (int y = 0; y < height / 2; y++)
-					dest.setRGB(x, y, bi.getRGB(2 * x, 2 * y));
-
-			// upper right-hand block
-			/*ker = new Kernel(1, 9, data);
-			op = new ConvolveOp(ker, ConvolveOp.EDGE_NO_OP, null);
-			bi = op.filter(src, null);
-			data = new float[] { -0.0645389f, -0.0406894f, 0.418092f,
-					0.788486f, 0.418092f, -0.0406894f, -0.0645389f };
-			ker = new Kernel(7, 1, data);
-			bi = op.filter(bi,  null);
-			for (int x = 0; x < width / 2; x++)
-				for (int y = 0; y < height / 2; y++)
-					dest.setRGB(x + width / 2, y, bi.getRGB(2 * x, 2 * y));*/
-
-			this.getImageDst().setIcon(new ImageIcon(dest));
+			this.setBorderTitle(this.getPanelDst(),
+					"Operation - CDF 9/7 Wavelet");
+			// lowpass filter
+			float[] h = { 0.026748757411f, -0.016864118443f, -0.078223266529f,
+					0.266864118443f, 0.602949018236f, 0.266864118443f,
+					-0.078223266529f, -0.016864118443f, 0.026748757411f };
+			// highpass filter
+			float[] g = { 0.091271763114f, -0.057543526229f, -0.591271763114f,
+					1.11508705f, -0.591271763114f, -0.057543526229f,
+					0.091271763114f };
+			for (int n = 0; n < 3; n++) {
+				float[][] wavelet = new float[height][height];
+				int offset = height - h.length / 2;
+				for (int i = 0; i < wavelet.length / 2; i++) {
+					int k = offset;
+					for (int j = 0; j < h.length; j++) {
+						wavelet[i][k] = h[j];
+						k = (k + 1) % wavelet[i].length;
+					}
+					offset = (offset + 2) % wavelet[i].length;
+				}
+				offset = height - g.length / 2;
+				for (int i = wavelet.length / 2; i < wavelet.length; i++) {
+					int k = offset;
+					for (int j = 0; j < g.length; j++) {
+						wavelet[i][k] = g[j];
+						k = (k + 1) % wavelet[i].length;
+					}
+					offset = (offset + 2) % wavelet[i].length;
+				}
+				// apply the wavelet transformation to columns
+				for (int x = 0; x < width; x++) {
+					int[] col = new int[height];
+					for (int y = 0; y < height; y++) {
+						int[] rgb = new int[3];
+						for (int i = 0; i < height; i++) {
+							Color color = new Color(rgbArray[x + i
+									* image.getWidth()]);
+							rgb[0] += (int) (wavelet[y][i] * color.getRed());
+							rgb[1] += (int) (wavelet[y][i] * color.getGreen());
+							rgb[2] += (int) (wavelet[y][i] * color.getBlue());
+						}
+						for (int i = 0; i < rgb.length; i++)
+							if (rgb[i] < 0)
+								rgb[i] = 0;
+							else if (rgb[i] > 255)
+								rgb[i] = 255;
+						col[y] = new Color(rgb[0], rgb[1], rgb[2]).getRGB();
+					}
+					// replace col in rgbArray
+					for (int y = 0; y < height; y++)
+						rgbArray[x + y * image.getWidth()] = col[y];
+				}
+				// apply wavelet transform to rows
+				for (int y = 0; y < height; y++) {
+					int[] row = new int[width];
+					for (int x = 0; x < width; x++) {
+						int[] rgb = new int[3];
+						for (int i = 0; i < width; i++) {
+							Color color = new Color(rgbArray[i + y
+									* image.getWidth()]);
+							rgb[0] += (int) (wavelet[x][i] * color.getRed());
+							rgb[1] += (int) (wavelet[x][i] * color.getGreen());
+							rgb[2] += (int) (wavelet[x][i] * color.getBlue());
+						}
+						for (int i = 0; i < rgb.length; i++)
+							if (rgb[i] < 0)
+								rgb[i] = 0;
+							else if (rgb[i] > 255)
+								rgb[i] = 255;
+						row[x] = new Color(rgb[0], rgb[1], rgb[2]).getRGB();
+					}
+					// replace row in rgbArray
+					for (int x = 0; x < width; x++)
+						rgbArray[x + y * image.getWidth()] = row[x];
+				}
+				width /= 2;
+				height /= 2;
+			}
+			BufferedImage bi = new BufferedImage(image.getWidth(),
+					image.getHeight(), BufferedImage.TYPE_INT_RGB);
+			bi.setRGB(0, 0, bi.getWidth(), bi.getHeight(), rgbArray, 0,
+					bi.getWidth());
+			this.getImageDst().setIcon(new ImageIcon(bi));
+		} else if (opName.equals("LeGall 5/3 Wavelet")) {
+			this.setBorderTitle(this.getPanelDst(),
+					"Operation - LeGall 5/3 Wavelet");
+			// lowpass filter
+			float[] h = { -1f / 8, 1f / 4, 3f / 4, 1f / 4, -1f / 8 };
+			// highpass filter
+			float[] g = { -1f / 2, 1, -1f / 2 };
+			for (int n = 0; n < 3; n++) {
+				float[][] wavelet = new float[height][height];
+				// fill row 1 values
+				wavelet[0][0] = h[2];
+				for (int j = 1; j < 3; j++)
+					wavelet[0][j] = 2 * h[2 + j];
+				// fill the remaining rows
+				int offset = 0;
+				for (int i = 1; i < height / 2; i++) {
+					for (int j = offset; j < offset + h.length; j++)
+						if (j < wavelet[i].length)
+							wavelet[i][j] = h[j - offset];
+					offset += 2;
+				}
+				// add h[0] to h[2] in the last row
+				wavelet[height / 2 - 1][height - 2] += h[0];
+				// set g in wavelet
+				offset = 0;
+				for (int i = height / 2; i < height; i++) {
+					for (int j = offset; j < offset + g.length; j++)
+						if (j < wavelet[i].length)
+							wavelet[i][j] = g[j - offset];
+					offset += 2;
+				}
+				// add g[1] to g[1] in the last row
+				wavelet[height - 1][height - 2] += g[0];
+				// apply the wavelet transformation to columns
+				for (int x = 0; x < width; x++) {
+					int[] col = new int[height];
+					for (int y = 0; y < height; y++) {
+						int[] rgb = new int[3];
+						for (int i = 0; i < height; i++) {
+							Color color = new Color(rgbArray[x + i
+									* image.getWidth()]);
+							rgb[0] += (int) (wavelet[y][i] * color.getRed());
+							rgb[1] += (int) (wavelet[y][i] * color.getGreen());
+							rgb[2] += (int) (wavelet[y][i] * color.getBlue());
+						}
+						for (int i = 0; i < rgb.length; i++)
+							if (rgb[i] < 0)
+								rgb[i] = 0;
+							else if (rgb[i] > 255)
+								rgb[i] = 255;
+						col[y] = new Color(rgb[0], rgb[1], rgb[2]).getRGB();
+					}
+					// replace col in rgbArray
+					for (int y = 0; y < height; y++)
+						rgbArray[x + y * image.getWidth()] = col[y];
+				}
+				// apply wavelet transform to rows
+				for (int y = 0; y < height; y++) {
+					int[] row = new int[width];
+					for (int x = 0; x < width; x++) {
+						int[] rgb = new int[3];
+						for (int i = 0; i < width; i++) {
+							Color color = new Color(rgbArray[i + y
+									* image.getWidth()]);
+							rgb[0] += (int) (wavelet[x][i] * color.getRed());
+							rgb[1] += (int) (wavelet[x][i] * color.getGreen());
+							rgb[2] += (int) (wavelet[x][i] * color.getBlue());
+						}
+						for (int i = 0; i < rgb.length; i++)
+							if (rgb[i] < 0)
+								rgb[i] = 0;
+							else if (rgb[i] > 255)
+								rgb[i] = 255;
+						row[x] = new Color(rgb[0], rgb[1], rgb[2]).getRGB();
+					}
+					// replace row in rgbArray
+					for (int x = 0; x < width; x++)
+						rgbArray[x + y * image.getWidth()] = row[x];
+				}
+				width /= 2;
+				height /= 2;
+			}
+			BufferedImage bi = new BufferedImage(image.getWidth(),
+					image.getHeight(), BufferedImage.TYPE_INT_RGB);
+			bi.setRGB(0, 0, bi.getWidth(), bi.getHeight(), rgbArray, 0,
+					bi.getWidth());
+			this.getImageDst().setIcon(new ImageIcon(bi));
 		} else if (opName.equals("Gray scale")) {
 			this.setBorderTitle(this.getPanelDst(), "Operation - Color to B/W");
 			op = new ColorConvertOp(ColorSpace.getInstance(ColorSpace.CS_GRAY),
@@ -490,6 +665,14 @@ public class ImageProcessing extends JFrame implements ActionListener {
 
 	public void setMiCDF97(JMenuItem miCDF97) {
 		this.miCDF97 = miCDF97;
+	}
+
+	public JMenuItem getMiLeGall() {
+		return miLeGall;
+	}
+
+	public void setMiLeGall(JMenuItem miLeGall) {
+		this.miLeGall = miLeGall;
 	}
 
 }
