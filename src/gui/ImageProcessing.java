@@ -30,6 +30,7 @@ import javax.swing.border.TitledBorder;
 import wavelet.CDF97;
 import wavelet.HaarWavelet;
 import wavelet.LeGall53;
+import wavelet.WaveletTransform;
 import codec.ImageDecoder;
 import codec.ImageEncoder;
 
@@ -207,14 +208,16 @@ public class ImageProcessing extends JFrame implements ActionListener {
 		int width = image.getWidth();
 		int height = image.getHeight();
 		int[] rgbArray = image.getRGB(0, 0, width, height, null, 0, width);
+		WaveletTransform wt;
 		if (opName.equals("JPEG Codify")) {
 			this.setBorderTitle(this.getPanelDst(), "Operation - JPEG Codify");
 			this.getImageDst().setIcon(new ImageIcon(this.jpegCodify(image)));
 		} else if (opName.equals("Haar Wavelet")) {
 			this.setBorderTitle(this.getPanelDst(), "Operation - Haar Wavelet");
 			for (int n = 0; n < 3; n++) {
-				new HaarWavelet(width, height).forward(rgbArray,
-						image.getWidth());
+				wt = new HaarWavelet(width, height);
+				wt.constructWaveletMatrix();
+				wt.forward(rgbArray, image.getWidth());
 				width /= 2;
 				height /= 2;
 			}
@@ -227,7 +230,9 @@ public class ImageProcessing extends JFrame implements ActionListener {
 			this.setBorderTitle(this.getPanelDst(),
 					"Operation - CDF 9/7 Wavelet");
 			for (int n = 0; n < 3; n++) {
-				new CDF97(width, height).forward(rgbArray, image.getWidth());
+				wt = new CDF97(width, height);
+				wt.constructWaveletMatrix();
+				wt.forward(rgbArray, image.getWidth());
 				width /= 2;
 				height /= 2;
 			}
@@ -240,7 +245,9 @@ public class ImageProcessing extends JFrame implements ActionListener {
 			this.setBorderTitle(this.getPanelDst(),
 					"Operation - LeGall 5/3 Wavelet");
 			for (int n = 0; n < 3; n++) {
-				new LeGall53(width, height).forward(rgbArray, image.getWidth());
+				wt = new LeGall53(width, height);
+				wt.constructWaveletMatrix();
+				wt.forward(rgbArray, image.getWidth());
 				width /= 2;
 				height /= 2;
 			}

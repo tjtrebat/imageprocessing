@@ -7,7 +7,6 @@ public class HaarWavelet extends WaveletTransform {
 
 	public HaarWavelet(int width, int height) {
 		super(h, g, width, height);
-		super.constructWaveletMatrix();
 	}
 
 }

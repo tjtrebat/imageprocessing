@@ -9,7 +9,6 @@ public class LeGall53 extends WaveletTransform {
 
 	public LeGall53(int width, int height) {
 		super(h, g, width, height);
-		this.constructWaveletMatrix();
 	}
 
 	@Override

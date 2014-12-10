@@ -12,7 +12,6 @@ public class CDF97 extends WaveletTransform {
 
 	public CDF97(int width, int height) {
 		super(h, g, width, height);
-		super.constructWaveletMatrix();
 	}
 
 }
