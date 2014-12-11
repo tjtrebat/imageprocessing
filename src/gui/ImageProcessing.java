@@ -197,6 +197,7 @@ public class ImageProcessing extends JFrame implements ActionListener {
 			this.setBorderTitle(this.getPanelDst(), "Copy of Original Image");
 			this.getImageDst().setIcon(this.getImageSrc().getIcon());
 			this.getMiJpegCodify().setEnabled(true);
+			this.getmTransform().setEnabled(true);
 			this.getMiGrayscale().setEnabled(true);
 		} else
 			process(cmd);
@@ -264,7 +265,6 @@ public class ImageProcessing extends JFrame implements ActionListener {
 					.setIcon(
 							new ImageIcon(op.filter((BufferedImage) this
 									.getImage(getImageDst()), null)));
-			this.getmTransform().setEnabled(true);
 		}
 		pack();
 	}
